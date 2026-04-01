@@ -79,6 +79,43 @@ PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(Prometh
 HttpServlet servlet = new MetricsServlet(prometheusRegistry.getPrometheusRegistry());
 ----
 
+
+=== Avoiding High Cardinality Tags
+
+When using Micrometer with Prometheus, avoid including high-cardinality values such as user IDs, order IDs, or request IDs as tag values.
+Each unique tag value creates a new time series in Prometheus, which can cause unbounded memory growth and eventually lead to out-of-memory errors.
+
+The following example demonstrates what to avoid:
+
+[source,java]
+----
+// Bad: creates a new time series for every unique userId
+registry.counter("http.requests", "userId", userId).increment();
+----
+
+Instead, use low-cardinality tags only:
+
+[source,java]
+----
+// Good: use the URI template, not the resolved path
+registry.counter("http.requests", "uri", "/api/users/{id}").increment();
+----
+
+For Spring Boot applications using WebMVC or WebFlux, make sure your tag contributors use the URI template (e.g. `/users/{id}`) rather than the resolved URI (e.g. `/users/12345`).
+
+NOTE: High-cardinality tags are one of the most common causes of Prometheus memory exhaustion in production environments.
+See the https://prometheus.io/docs/practices/naming/#labels[Prometheus label best practices] for further guidance.
+```
+
+---
+
+Paste this right before the line that says `=== Scrape Format`, then:
+
+1. Click **pencil icon** to edit
+2. Paste the block above in the right place
+3. Scroll down → **"Create a new branch"** → name it:
+```
+docs/add-high-cardinality-warning
 === Scrape Format
 
 By default, the `PrometheusMeterRegistry` `scrape()` method returns the https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format[Prometheus text format].
